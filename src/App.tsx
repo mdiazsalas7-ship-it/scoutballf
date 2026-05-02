@@ -15,6 +15,7 @@ import {
   Activity, Award, Check, ArrowRight, Camera, Wind,
   Users, Loader2, AlertCircle, Pencil, Trash2,
   ImagePlus, BarChart3, Image as ImageIcon, FileDown,
+  Download, Smartphone,
 } from 'lucide-react';
 import logoSrc from './assets/logo.png';
 
@@ -1176,7 +1177,116 @@ function Toast({ toast }: any) {
     </div>
   );
 }
+// =========================================================
+// INSTALL PROMPT — Banner para instalar la PWA
+// =========================================================
+function InstallPrompt() {
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showBanner, setShowBanner] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
+  useEffect(() => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+    if (isStandalone) return;
+
+    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    setIsIOS(iOS);
+
+    const dismissed = localStorage.getItem('install-dismissed');
+    if (dismissed) {
+      const daysSince = (Date.now() - parseInt(dismissed)) / (1000 * 60 * 60 * 24);
+      if (daysSince < 7) return;
+    }
+
+    if (iOS) {
+      setTimeout(() => setShowBanner(true), 3000);
+    } else {
+      const handler = (e: any) => {
+        e.preventDefault();
+        setDeferredPrompt(e);
+        setTimeout(() => setShowBanner(true), 3000);
+      };
+      window.addEventListener('beforeinstallprompt', handler);
+      return () => window.removeEventListener('beforeinstallprompt', handler);
+    }
+  }, []);
+
+  const handleInstall = async () => {
+    if (isIOS) { setShowIOSInstructions(true); return; }
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    setDeferredPrompt(null);
+    setShowBanner(false);
+  };
+
+  const handleDismiss = () => {
+    localStorage.setItem('install-dismissed', Date.now().toString());
+    setShowBanner(false);
+  };
+
+  if (!showBanner && !showIOSInstructions) return null;
+
+  return (
+    <>
+      {showBanner && !showIOSInstructions && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[90] bg-neutral-900 border border-lime-400 rounded-2xl shadow-2xl animate-slide-up"
+          style={{ width: 'calc(100% - 32px)', maxWidth: '440px' }}>
+          <div className="p-4 flex items-start gap-3">
+            <div className="w-12 h-12 rounded-xl bg-lime-400 flex items-center justify-center flex-shrink-0">
+              <Smartphone size={22} className="text-neutral-950" strokeWidth={2.5} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="f-display text-lg text-white leading-tight">INSTALAR APP</h4>
+              <p className="f-body text-xs text-neutral-400 mt-1">Accede a Scout Ball desde tu pantalla de inicio.</p>
+            </div>
+            <button onClick={handleDismiss} className="w-7 h-7 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-400 flex-shrink-0">
+              <X size={14} />
+            </button>
+          </div>
+          <div className="px-4 pb-4">
+            <button onClick={handleInstall} className="w-full bg-lime-400 text-neutral-950 rounded-xl py-3 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+              <Download size={16} strokeWidth={2.5} />
+              <span className="f-display text-base tracking-wide">{isIOS ? 'CÓMO INSTALAR' : 'INSTALAR AHORA'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showIOSInstructions && (
+        <div className="fixed inset-0 bg-neutral-950/90 backdrop-blur z-[95] flex items-center justify-center p-4"
+          onClick={() => { setShowIOSInstructions(false); setShowBanner(false); }}>
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl max-w-sm w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="p-5 border-b border-neutral-800 flex items-center justify-between">
+              <h3 className="f-display text-2xl text-white">INSTALAR EN iOS</h3>
+              <button onClick={() => { setShowIOSInstructions(false); setShowBanner(false); }} className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center text-white">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-full bg-lime-400 text-neutral-950 flex items-center justify-center f-display text-sm flex-shrink-0">1</div>
+                <p className="f-body text-sm text-neutral-300 leading-relaxed">Toca el botón <span className="text-lime-400 font-semibold">Compartir</span> abajo en Safari (ícono ⬆️).</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-full bg-lime-400 text-neutral-950 flex items-center justify-center f-display text-sm flex-shrink-0">2</div>
+                <p className="f-body text-sm text-neutral-300 leading-relaxed">Desliza y elige <span className="text-lime-400 font-semibold">"Añadir a pantalla de inicio"</span>.</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-full bg-lime-400 text-neutral-950 flex items-center justify-center f-display text-sm flex-shrink-0">3</div>
+                <p className="f-body text-sm text-neutral-300 leading-relaxed">Toca <span className="text-lime-400 font-semibold">"Añadir"</span> arriba a la derecha. ¡Listo!</p>
+              </div>
+              <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-3 mt-4">
+                <p className="f-body text-xs text-neutral-500">💡 Debes usar <span className="text-lime-400">Safari</span>, no Chrome ni otros navegadores.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 // =========================================================
 // MAIN APP
 // =========================================================
@@ -1408,6 +1518,8 @@ export default function App() {
 
       {/* Printable oculto — usa prospectForPDF (con base64) si está disponible */}
       {prospectForPDF && <PrintableProspect prospect={prospectForPDF} logoBase64={logoForPDF} />}
+
+      <InstallPrompt />
     </div>
   );
 }
